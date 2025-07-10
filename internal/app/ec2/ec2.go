@@ -72,10 +72,20 @@ func (e *EC2Fetcher) GetDBInstanceTypeInformation(instanceTypes []string) (Metri
 
 		instanceTypeSpan.SetAttributes(trace.AWSInstanceTypesCount(int64(len(instances))))
 
-		// Remove "db." prefix from instance types
-		instanceTypesToFetch := make([]aws_ec2_types.InstanceType, len(instances))
-		for i, instance := range instances {
-			instanceTypesToFetch[i] = (aws_ec2_types.InstanceType)(removeDBPrefix(instance))
+		// Remove "db." prefix from instance types and filter out those starting with "x2g"
+		instanceTypesToFetch := make([]aws_ec2_types.InstanceType, 0, len(instances))
+		for _, instance := range instances {
+			cleanType := removeDBPrefix(instance)
+			if len(cleanType) >= 3 && cleanType[:3] == "x2g" {
+				// Suppress DescribeInstanceTypes call for x2g types
+				continue
+			}
+			instanceTypesToFetch = append(instanceTypesToFetch, aws_ec2_types.InstanceType(cleanType))
+		}
+
+		if len(instanceTypesToFetch) == 0 {
+			// If all types were filtered, skip the API call
+			continue
 		}
 
 		input := &aws_ec2.DescribeInstanceTypesInput{InstanceTypes: instanceTypesToFetch}

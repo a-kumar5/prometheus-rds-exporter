@@ -73,3 +73,7 @@ checkcov:
 
 .PHONY: all-tests
 all-tests: test kubeconform helm-test goreleaser-check
+
+.PHONY: build-arm64
+build-arm64:
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -ldflags="-X '$(BUILD_INFO_PACKAGE_PATH).Version=development' -X '$(BUILD_INFO_PACKAGE_PATH).CommitSHA=$(GIT_COMMIT_SHA)' -X '$(BUILD_INFO_PACKAGE_PATH).Date=$(BUILD_DATE)'" -o $(BINARY)
